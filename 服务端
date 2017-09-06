@@ -1,0 +1,80 @@
+import tkinter
+import socket
+import threading
+
+
+win = tkinter.Tk()
+win.title("聊天服务器")
+win.geometry("400x400+400+50")
+dictUser = {}
+def running(data):
+    #连接者的姓名
+    #data表示收到的链接信息，即链接者的ip
+    userName = data.recv(1024)
+    #连接者的IP
+
+    dictUser[userName.decode("utf-8")] = data
+    data.send(str(dictUser.keys()).encode("utf-8"))
+    #print(dictUser)
+    while True:
+        dataStr = data.recv(1024)
+        rdata = dataStr.decode("utf-8")
+        dataList = rdata.split(":")
+        #判断是否刷新联系人信息并返回给源客户端联系人信息
+        if str(dataList[0]) =="标志":
+            data.send(("***"+str(dictUser.keys())).encode("utf-8"))
+        elif str(dataList[0]) =="文件":
+            dictUser[str(dataList[0])].send(("###"+str(dataList[1])).encode("utf-8"))
+        #发送给目标客户端信息
+        else:
+            dictUser[str(dataList[0])].send((userName.decode("utf-8") + "说：" + str(dataList[1])).encode("utf-8"))
+
+
+
+
+
+
+def run():
+    IP = e1.get()
+    Port = e2.get()
+    server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    server.bind((IP, int(Port)))  # 本地ip和1024以上任意端口
+    server.listen(5)
+    labelShow["text"]="启动成功"
+    while True:
+        data,ca = server.accept()
+        t = threading.Thread(target=running, args=(data,))
+        t.start()
+#启动线程
+def start1():
+    s = threading.Thread(target=run)
+    s.start()
+
+
+labelIp = tkinter.Label(win,text = "  IP:")
+labelIp.place(relx = 0.2,rely = 0.05)
+e1 = tkinter.StringVar()
+entryIp = tkinter.Entry(win,textvariable = e1)
+entryIp.place(relx = 0.3,rely = 0.05)
+labelPort = tkinter.Label(win,text = "Port:")
+labelPort.place(relx = 0.2,rely = 0.15)
+e2 = tkinter.Variable()
+entryPort = tkinter.Entry(win,textvariable = e2)
+entryPort.place(relx = 0.3,rely = 0.15)
+labelShow = tkinter.Label(win,width = 50,height = 10)
+labelShow.place(relx = 0.05,rely = 0.4)
+
+
+buttonStart = tkinter.Button(win, text="启   动", width=10, command=start1)
+buttonStart.place(relx= 0.4,rely = 0.3)
+
+
+
+
+
+
+win.mainloop()
+
+
+
+
