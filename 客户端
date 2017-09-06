@@ -1,0 +1,172 @@
+import os
+import re
+import tkinter
+import socket
+import threading
+import win32ui
+
+win = tkinter.Tk()
+win.title("聊天客户端")
+win.geometry("400x500+400+50")
+
+ck = None
+sendPath = None
+def connectServe():
+    global ck
+    ipStr = eip.get()
+    portStr = ep.get()
+    userStr = eu.get()
+    client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    client.connect((ipStr, int(portStr)))
+    client.send(userStr.encode("utf-8"))
+    ck = client
+    #等待接收数据
+    t = threading.Thread(target=getInfo)
+    t.start()
+
+#接收信息
+def getInfo():
+        listUser.insert(tkinter.END, "当前在线用户：")
+        data1 = ck.recv(1024)
+        pat = r"'(.*?)'"
+        re_use = re.compile(pat, re.S)
+        list1 = re_use.findall(data1.decode("utf-8"))
+        for i in list1:
+            listUser.insert(tkinter.END,  i)
+        while True:
+            data = ck.recv(1024)
+            rdata = data.decode("utf-8")
+            print(rdata[0:3])
+            if str(rdata)[0:3] == "***":
+                list2 = re_use.findall(data.decode("utf-8"))
+                for j in list2:
+                    listUser.insert(tkinter.END, j)
+            elif str(rdata)[0:3] == "###":
+                textShow.insert(tkinter.END, "\n" + "是否接收文件？")
+                return rdata
+            else:
+                textShow.insert(tkinter.END, "\n" + data.decode("utf-8"))
+#打开选择文件对话框
+def selectFile():
+    dlg = win32ui.CreateFileDialog(1)  # 1表示打开文件对话框
+    dlg.SetOFNInitialDir(r'E:\python学习')  # 设置打开文件对话框中的初始显示目录
+    dlg.DoModal()
+
+    filename = dlg.GetPathName()  # 获取选择的文件名称
+    eps.set(filename)
+    global sendPath
+    sendPath = filename
+    return filename
+#接收文件
+def ReceFile():
+    savePath = r'E:\saveFIle'
+    w = open(savePath,"w")
+    writeData = getInfo()
+    w.write(writeData)
+    w.close()
+
+
+#发送文件
+def sendFile():
+    f = open(sendPath,"r")
+    data = f.readlines()
+    fileAndFlag = "文件:"+str(data.decode("utf-8"))
+    ck.send(fileAndFlag.encode("utf-8"))
+
+
+
+
+#发送信息
+def sendMessage():
+    friend = ltu.get()
+    sendStr1 = ei.get()
+    sendStr = friend + ":" + sendStr1
+    ck.send(sendStr.encode("utf-8"))
+    textShow.insert(tkinter.END,"\n" + "我说："+sendStr1)
+    entryInput.delete('0', 'end')
+
+def clearText():
+    textShow.delete(1.0,tkinter.END)
+
+def reSet():
+    flag = "**"
+    ck.send(("标志"+":"+flag).encode("utf-8"))
+    listUser.delete(0,tkinter.END)
+    listUser.insert(tkinter.END, "当前在线用户：")
+
+
+
+
+
+
+
+labelIp = tkinter.Label(win,text = "用 户 名:")
+labelIp.place(relx = 0.15,rely = 0.05)
+eu = tkinter.StringVar()
+entryUser = tkinter.Entry(win,textvariable= eu)
+entryUser.place(relx = 0.33,rely = 0.05)
+labelIp = tkinter.Label(win,text = "服 务 器IP:")
+labelIp.place(relx = 0.15,rely = 0.1)
+eip = tkinter.StringVar()
+entryIp = tkinter.Entry(win,textvariable=eip)
+entryIp.place(relx = 0.33,rely = 0.1)
+labelPort = tkinter.Label(win,text = "服务器Port:")
+labelPort.place(relx = 0.15,rely = 0.15)
+ep = tkinter.StringVar()
+entryPort = tkinter.Entry(win,textvariable=ep)
+entryPort.place(relx = 0.33,rely = 0.15)
+button = tkinter.Button(win,text = "   连    接  ",command = connectServe)
+button.place(relx = 0.4,rely =0.22)
+
+textShow = tkinter.Text(win,width = 30,height = 10)
+textShow.place(relx = 0.4,rely = 0.3)
+
+listUser = tkinter.Listbox(win,width = 15,height = 8)
+listUser.place(relx = 0.05,rely = 0.3)
+
+
+ei = tkinter.StringVar()
+entryInput = tkinter.Entry(win,width = 50,textvariable=ei)
+entryInput.place(relx = 0.05,rely = 0.6)
+
+ltu= tkinter.StringVar()
+labelToUser = tkinter.Label(win,width = 20,textvariable = ltu)
+labelToUser.place(relx = 0.05,rely = 0.68)
+
+buttonSend = tkinter.Button(win,text = " 发   送 ",command = sendMessage)
+buttonSend.place(relx = 0.5,rely =0.67)
+
+buttonClear = tkinter.Button(win,text = "清空聊天记录",command =clearText )
+buttonClear.place(relx = 0.7,rely =0.67)
+
+buttonReset = tkinter.Button(win,text = "刷新联系人列表",command =reSet )
+buttonReset.place(relx = 0.05,rely =0.22)
+
+buttonSelect = tkinter.Button(win,text = "选择文件",command =selectFile )
+buttonSelect.place(relx = 0.68,rely = 0.79)
+
+# buttonSendFile = tkinter.Button(win,text="发送文件",command =sendFile  )
+# buttonSendFile.place(relx = 0.84,rely = 0.79)
+#
+# buttonReceFile = tkinter.Button(win,text="确认接收",command =ReceFile  )
+# buttonReceFile.place(relx = 0.84,rely = 0.85)
+
+eps = tkinter.StringVar()
+entryPath = tkinter.Entry(win,width = 30,textvariable = eps)
+entryPath.place(relx = 0.1,rely = 0.8)
+
+def show(event):
+    ltu.set(listUser.get(listUser.curselection()))
+
+listUser.bind("<<ListboxSelect>>",show)
+
+
+
+
+
+win.mainloop()
+
+
+
+
+
